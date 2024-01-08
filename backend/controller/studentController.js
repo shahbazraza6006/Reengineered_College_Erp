@@ -3,6 +3,7 @@ import Test from "../models/test.js";
 import Student from "../models/student.js";
 import Subject from "../models/subject.js";
 import Marks from "../models/marks.js";
+import Feedback from "../models/feedback.js";
 import Attendence from "../models/attendance.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -205,3 +206,39 @@ export const attendance = async (req, res) => {
     res.status(500).json(error);
   }
 };
+
+export const giveFeedback = async (req, res) => {
+  try{
+
+    const { department, year, section } = req.body;
+    const errors = {notesError : String};
+    const student = await Student.findOne({department, year, section});
+
+    //Find the subject to which the student wants to give feedback
+    const subject = await Subject.findOne({subjectCode : req.body.subjectCode});
+
+    //Check if the student has already given feedback to the subject
+    const feedback = await Feedback.findOne({student : student._id, subject : subject._id});
+
+    if(feedback){
+      errors.notesError = "You have already given feedback to this subject";
+      return res.status(400).json(errors);
+    }
+    else{
+      const newFeedback = new Feedback({
+        subject : subject,
+        student : student,
+        feedbackComments : req.body.feedbackComments,
+      })
+      await newFeedback.save();
+      res.status(200).json({message : "Feedback given successfully"});
+    }
+
+
+  } catch (error) {
+    res.status(400).json({
+      message : "something went wrong with feedback",
+      error : error.message
+    })
+  }
+}
