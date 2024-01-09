@@ -52,5 +52,5 @@ router.post("/deletefaculty", auth, deleteFaculty);
 router.post("/deletestudent", auth, deleteStudent);
 router.post("/deletedepartment", auth, deleteDepartment);
 router.post("/deletesubject", auth, deleteSubject);
-
+// this is the statement
 export default router;
