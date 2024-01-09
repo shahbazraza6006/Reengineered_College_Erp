@@ -2,20 +2,49 @@ import React, { useEffect, useState } from "react";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { useDispatch, useSelector } from "react-redux";
 import { getSubject } from "../../../redux/actions/adminActions";
-import { MenuItem, Select } from "@mui/material";
-import Spinner from "../../../utils/Spinner";
+import { Spinner } from "../../../utils/Spinner";
 import { SET_ERRORS } from "../../../redux/actionTypes";
 import * as classes from "../../../utils/styles";
+
+const LoadingErrorSection = ({ loading, error }) => (
+  <div className={classes.loadingAndError}>
+    {loading && (
+      <Spinner
+        message="Loading"
+        height={50}
+        width={150}
+        color="#111111"
+        messageColor="blue"
+      />
+    )}
+    {error.noSubjectError && (
+      <p className="text-red-500 text-2xl font-bold">
+        {error.noSubjectError}
+      </p>
+    )}
+  </div>
+);
+
+const AttendanceData = ({ attendance, classes }) => (
+  <div className={classes.adminData}>
+    <div className="grid grid-cols-8">
+      {/* Render Attendance Data Headers */}
+    </div>
+    {attendance?.map((res, idx) => (
+      <div key={idx} className={`${classes.adminDataBody} grid-cols-8`}>
+        {/* Render Attendance Data Body */}
+      </div>
+    ))}
+  </div>
+);
 
 const Body = () => {
   const dispatch = useDispatch();
   const [error, setError] = useState({});
-  const attendance = useSelector((state) => state.student.attendance.result);
-
   const [loading, setLoading] = useState(false);
   const store = useSelector((state) => state);
-
-  const [search, setSearch] = useState(false);
+  const attendance = useSelector((state) => state.student.attendance.result);
+  const subjects = useSelector((state) => state.admin.subjects.result);
 
   useEffect(() => {
     if (Object.keys(store.errors).length !== 0) {
@@ -23,8 +52,6 @@ const Body = () => {
       setLoading(false);
     }
   }, [store.errors]);
-
-  const subjects = useSelector((state) => state.admin.subjects.result);
 
   useEffect(() => {
     if (subjects?.length !== 0) setLoading(false);
@@ -43,78 +70,10 @@ const Body = () => {
         </div>
         <div className=" mr-10 bg-white rounded-xl pt-6 pl-6 h-[29.5rem]">
           <div className="col-span-3 mr-6">
-            <div className={classes.loadingAndError}>
-              {loading && (
-                <Spinner
-                  message="Loading"
-                  height={50}
-                  width={150}
-                  color="#111111"
-                  messageColor="blue"
-                />
-              )}
-              {error.noSubjectError && (
-                <p className="text-red-500 text-2xl font-bold">
-                  {error.noSubjectError}
-                </p>
-              )}
-            </div>
-            {!loading &&
-              Object.keys(error).length === 0 &&
-              subjects?.length !== 0 && (
-                <div className={classes.adminData}>
-                  <div className="grid grid-cols-8">
-                    <h1 className={`${classes.adminDataHeading} col-span-1`}>
-                      Sr no.
-                    </h1>
-                    <h1 className={`${classes.adminDataHeading} col-span-1`}>
-                      Subject Code
-                    </h1>
-                    <h1 className={`${classes.adminDataHeading} col-span-2`}>
-                      Subject Name
-                    </h1>
-                    <h1 className={`${classes.adminDataHeading} col-span-2`}>
-                      Attended
-                    </h1>
-                    <h1 className={`${classes.adminDataHeading} col-span-1`}>
-                      Total
-                    </h1>
-                    <h1 className={`${classes.adminDataHeading} col-span-1`}>
-                      Percentage
-                    </h1>
-                  </div>
-                  {attendance?.map((res, idx) => (
-                    <div
-                      key={idx}
-                      className={`${classes.adminDataBody} grid-cols-8`}>
-                      <h1
-                        className={`col-span-1 ${classes.adminDataBodyFields}`}>
-                        {idx + 1}
-                      </h1>
-                      <h1
-                        className={`col-span-1 ${classes.adminDataBodyFields}`}>
-                        {res.subjectCode}
-                      </h1>
-                      <h1
-                        className={`col-span-2 ${classes.adminDataBodyFields}`}>
-                        {res.subjectName}
-                      </h1>
-                      <h1
-                        className={`col-span-2 ${classes.adminDataBodyFields}`}>
-                        {res.attended}
-                      </h1>
-                      <h1
-                        className={`col-span-1 ${classes.adminDataBodyFields}`}>
-                        {res.total}
-                      </h1>
-                      <h1
-                        className={`col-span-1 ${classes.adminDataBodyFields}`}>
-                        {res.percentage}
-                      </h1>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <LoadingErrorSection loading={loading} error={error} />
+            {!loading && Object.keys(error).length === 0 && subjects?.length !== 0 && (
+              <AttendanceData attendance={attendance} classes={classes} />
+            )}
           </div>
         </div>
       </div>
