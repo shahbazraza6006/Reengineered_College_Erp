@@ -103,21 +103,40 @@ export const updateAdmin = async (req, res) => {
     res.status(500).json(errors);
   }
 };
+// Utility function to generate username for Admin and Faculty
+const generateUsername = (departmentCode, helper) => {
+  const date = new Date();
+  const components = ["ADM", date.getFullYear(), departmentCode, helper];
+  return components.join("");
+};
 
+// Utility function to generate password for Admin and Faculty
+const generatePassword = (dob) => {
+  const newDob = dob.split("-").reverse().join("-");
+  return bcrypt.hash(newDob, 10);
+};
+
+const handleErrors = (res, error) => {
+  const errors = { backendError: error.toString() };
+  res.status(500).json(errors);
+};
 export const addAdmin = async (req, res) => {
   try {
     const { name, dob, department, contactNumber, avatar, email, joiningYear } =
       req.body;
+
     const errors = { emailError: String };
     const existingAdmin = await Admin.findOne({ email });
+
     if (existingAdmin) {
       errors.emailError = "Email already exists";
       return res.status(400).json(errors);
     }
-    const existingDepartment = await Department.findOne({ department });
-    let departmentHelper = existingDepartment.departmentCode;
-    const admins = await Admin.find({ department });
 
+    const existingDepartment = await Department.findOne({ department });
+    const departmentHelper = existingDepartment.departmentCode;
+
+    const admins = await Admin.find({ department });
     let helper;
     if (admins.length < 10) {
       helper = "00" + admins.length.toString();
@@ -126,15 +145,10 @@ export const addAdmin = async (req, res) => {
     } else {
       helper = admins.length.toString();
     }
-    var date = new Date();
-    var components = ["ADM", date.getFullYear(), departmentHelper, helper];
 
-    var username = components.join("");
-    let hashedPassword;
-    const newDob = dob.split("-").reverse().join("-");
-   console.log("password",newDob)
-    hashedPassword = await bcrypt.hash(newDob, 10);
-    var passwordUpdated = false;
+    const username = generateUsername(departmentHelper, helper);
+    const hashedPassword = await generatePassword(dob);
+
     const newAdmin = await new Admin({
       name,
       email,
@@ -145,18 +159,17 @@ export const addAdmin = async (req, res) => {
       avatar,
       contactNumber,
       dob,
-      passwordUpdated,
+      passwordUpdated: false,
     });
+
     await newAdmin.save();
     return res.status(200).json({
       success: true,
-      message: "Admin registerd successfully",
+      message: "Admin registered successfully",
       response: newAdmin,
     });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
   }
 };
 
@@ -225,7 +238,6 @@ export const addDepartment = async (req, res) => {
     res.status(500).json(errors);
   }
 };
-
 export const addFaculty = async (req, res) => {
   try {
     const {
@@ -296,33 +308,38 @@ export const addFaculty = async (req, res) => {
 
 export const getFaculty = async (req, res) => {
   try {
-    const { department } = req.body;
-    const errors = { noFacultyError: String };
-    const faculties = await Faculty.find({ department });
-    if (faculties.length === 0) {
-      errors.noFacultyError = "No Faculty Found";
-      return res.status(404).json(errors);
-    }
-    res.status(200).json({ result: faculties });
+    const faculty = await Faculty.find();
+    return res.status(200).json({
+      success: true,
+      message: "Faculty retrieved successfully",
+      response: faculty,
+    });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
+  }
+};
+export const getSubject = async (req, res) => {
+  try {
+    const subjects = await Subject.find().populate("faculty", "name");
+    return res.status(200).json({
+      success: true,
+      message: "Subjects retrieved successfully",
+      response: subjects,
+    });
+  } catch (error) {
+    handleErrors(res, error);
   }
 };
 export const getNotice = async (req, res) => {
   try {
-    const errors = { noNoticeError: String };
-    const notices = await Notice.find({});
-    if (notices.length === 0) {
-      errors.noNoticeError = "No Notice Found";
-      return res.status(404).json(errors);
-    }
-    res.status(200).json({ result: notices });
+    const notices = await Notice.find().populate("author", "name");
+    return res.status(200).json({
+      success: true,
+      message: "Notices retrieved successfully",
+      response: notices,
+    });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
   }
 };
 
@@ -365,59 +382,32 @@ export const addSubject = async (req, res) => {
   }
 };
 
-export const getSubject = async (req, res) => {
-  try {
-    const { department, year } = req.body;
-
-    if (!req.userId) return res.json({ message: "Unauthenticated" });
-    const errors = { noSubjectError: String };
-
-    const subjects = await Subject.find({ department, year });
-    if (subjects.length === 0) {
-      errors.noSubjectError = "No Subject Found";
-      return res.status(404).json(errors);
-    }
-    res.status(200).json({ result: subjects });
-  } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
-  }
-};
 
 export const getAdmin = async (req, res) => {
   try {
     const { department } = req.body;
-
     const errors = { noAdminError: String };
-
     const admins = await Admin.find({ department });
     if (admins.length === 0) {
-      errors.noAdminError = "No Subject Found";
+      errors.noAdminError = "No Admin Found";
       return res.status(404).json(errors);
     }
     res.status(200).json({ result: admins });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
   }
 };
-
 export const deleteAdmin = async (req, res) => {
   try {
     const admins = req.body;
     const errors = { noAdminError: String };
     for (var i = 0; i < admins.length; i++) {
       var admin = admins[i];
-   
       await Admin.findOneAndDelete({ _id: admin });
     }
-    res.status(200).json({ message: "Admin Deleted" });
+    res.status(200).json({ message: "Admin(s) Deleted" });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
   }
 };
 export const deleteFaculty = async (req, res) => {
@@ -426,14 +416,11 @@ export const deleteFaculty = async (req, res) => {
     const errors = { noFacultyError: String };
     for (var i = 0; i < faculties.length; i++) {
       var faculty = faculties[i];
- 
       await Faculty.findOneAndDelete({ _id: faculty });
     }
-    res.status(200).json({ message: "Faculty Deleted" });
+    res.status(200).json({ message: "Faculty(s) Deleted" });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    handleErrors(res, error);
   }
 };
 export const deleteStudent = async (req, res) => {
@@ -483,6 +470,22 @@ export const deleteDepartment = async (req, res) => {
   }
 };
 
+// Helper function to generate student username
+const generateStudentUsername = (date, departmentHelper, helper) => {
+  var components = ["STU", date.getFullYear(), departmentHelper, helper];
+  return components.join("");
+};
+
+const hashPassword = async (dob) => {
+  if (!dob) {
+    throw new Error('Date of birth is missing or undefined');
+  }
+
+  const newDob = dob.split("-").reverse().join("-");
+  return await bcrypt.hash(newDob, 10);
+};
+
+
 export const addStudent = async (req, res) => {
   try {
     const {
@@ -501,14 +504,14 @@ export const addStudent = async (req, res) => {
       motherContactNumber,
       year,
     } = req.body;
-    const errors = { emailError: String };
+
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
-      errors.emailError = "Email already exists";
-      return res.status(400).json(errors);
+      return res.status(400).json({ emailError: "Email already exists" });
     }
+
     const existingDepartment = await Department.findOne({ department });
-    let departmentHelper = existingDepartment.departmentCode;
+    const departmentHelper = existingDepartment.departmentCode;
 
     const students = await Student.find({ department });
     let helper;
@@ -519,17 +522,12 @@ export const addStudent = async (req, res) => {
     } else {
       helper = students.length.toString();
     }
-    var date = new Date();
-    var components = ["STU", date.getFullYear(), departmentHelper, helper];
+   
+    const date = new Date();
+    const username = generateStudentUsername(date, departmentHelper, helper);
+    const hashedPassword = await hashPassword(dob);
 
-    var username = components.join("");
-    let hashedPassword;
-    const newDob = dob.split("-").reverse().join("-");
-
-    hashedPassword = await bcrypt.hash(newDob, 10);
-    var passwordUpdated = false;
-   console.log("password",newDob)
-    const newStudent = await new Student({
+    const newStudent = new Student({
       name,
       dob,
       password: hashedPassword,
@@ -546,27 +544,33 @@ export const addStudent = async (req, res) => {
       fatherContactNumber,
       motherContactNumber,
       year,
-      passwordUpdated,
+      passwordUpdated: false,
     });
+
     await newStudent.save();
-    const subjects = await Subject.find({ department, year });
-    if (subjects.length !== 0) {
-      for (var i = 0; i < subjects.length; i++) {
-        newStudent.subjects.push(subjects[i]._id);
-      }
-    }
-    await newStudent.save();
+    await assignSubjectsToStudent(newStudent, department, year);
+
     return res.status(200).json({
       success: true,
-      message: "Student registerd successfully",
+      message: "Student registered successfully",
       response: newStudent,
     });
   } catch (error) {
-    const errors = { backendError: String };
-    errors.backendError = error;
-    res.status(500).json(errors);
+    return res.status(500).json({ backendError: error.toString() });
   }
 };
+
+// Helper function to assign subjects to a student
+const assignSubjectsToStudent = async (newStudent, department, year) => {
+  const subjects = await Subject.find({ department, year });
+  if (subjects.length !== 0) {
+    subjects.forEach((subject) => {
+      newStudent.subjects.push(subject._id);
+    });
+    await newStudent.save();
+  }
+};
+
 
 export const getStudent = async (req, res) => {
   try {
